@@ -1,7 +1,7 @@
 module functions
 implicit none
 contains
-
+!this is a comment
   function eLa(u,c,dt,N) result(x)
     !Operator corresponding to the kinetic part of the Hamiltonian
     integer, parameter :: dp=selected_real_kind(15,307)
