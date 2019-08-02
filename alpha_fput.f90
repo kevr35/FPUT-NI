@@ -95,10 +95,10 @@ program fpu
   use functions
   implicit none 
   integer, parameter :: dp=selected_real_kind(15,307)
-  integer :: N, i, k,j,t, m=1, it_max, modes, jumps, spacing
+  integer :: N, i, k,j, m=1, it_max, modes, jumps
   real(dp), parameter :: pi=4.0_dp*atan(1.0_dp),c1=(sqrt(3.0_dp)-1.0_dp)/(2.0_dp*sqrt(3.0_dp)), c2=1.0_dp/(sqrt(3.0_dp)),d1=0.5_dp
   real(dp) :: dt=0.1_dp, para, max_time, e, Amp
-  real(dp), allocatable :: u(:,:), a(:,:), nm_energy(:)
+  real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:), T(:)
 
   write(*, '("Enter the number of active particles: ")', &
     advance='no')
@@ -110,8 +110,7 @@ program fpu
   !  advance='no')
   !read *, para
   para = 1.0_dp
-  spacing=5
-  jumps = spacing/dt
+  jumps = 5/dt
   write(*, '("Enter the maximum time: ")', &
     advance='no')
   read *, max_time
@@ -120,12 +119,13 @@ program fpu
   !  advance='no')
   !read *, modes
   modes = 1
-  allocate( u(2,N+2),a(2,N), nm_energy(modes))
+  allocate( u(2,it_max,N+2),a(2,it_max,N), nm_energy(it_max,modes), t(it_max)  )
 
   !Initial Conditions
+  t(1) = 0.0_dp
   do i=1,(N+2)/2
-    u(1,i) = sin(m*(i-1)*pi/(N+1))
-    u(2,i) = 0.0_dp
+    u(1,1,i) = sin(m*(i-1)*pi/(N+1))
+    u(2,1,i) = 0.0_dp
   end do
 
 
@@ -134,15 +134,15 @@ program fpu
 
     if (mod(N,2)==0) then !N is even
       do i=(N+2)/2+1, N+2
-        u(1,i) = -u(1,N+3-i)
-        u(2,i) = -u(2,N+3-i)
+        u(1,1,i) = -u(1,1,N+3-i)
+        u(2,1,i) = -u(2,1,N+3-i)
       end do
     else !N is odd
-      u(1,(N+2)/2+1) = 0.0_dp
-      u(2,(N+2)/2+1) = 0.0_dp
+      u(1,1,(N+2)/2+1) = 0.0_dp
+      u(2,1,(N+2)/2+1) = 0.0_dp
       do i=(N+2)/2+2, N+2
-        u(1,i) = -u(1,N+3-i)
-        u(2,i) = -u(2,N+3-i)
+        u(1,1,i) = -u(1,1,N+3-i)
+        u(2,1,i) = -u(2,1,N+3-i)
       end do  
     end if
 
@@ -152,84 +152,102 @@ program fpu
 
     if (mod(N,2)==0) then !N is even
       do i=(N+2)/2+1, N+2
-        u(1,i) = u(1,N+3-i)
-        u(2,i) = u(2,N+3-i)
+        u(1,1,i) = u(1,1,N+3-i)
+        u(2,1,i) = u(2,1,N+3-i)
       end do
     else !N is odd
-      u(1,(N+2)/2+1) = (-1.0_dp)**((m+3)/(2))
-      u(2,(N+2)/2+1) = 0.0_dp
+      u(1,1,(N+2)/2+1) = (-1.0_dp)**((m+3)/(2))
+      u(2,1,(N+2)/2+1) = 0.0_dp
       do i=(N+2)/2+2, N+2
-        u(1,i) = u(1,N+3-i)
-        u(2,i) = u(2,N+3-i)
+        u(1,1,i) = u(1,1,N+3-i)
+        u(2,1,i) = u(2,1,N+3-i)
       end do  
     end if
 
   end if
 
 
-u(1,:) = (1.0_dp/sin((m*pi/(2*N+2.0_dp))))*sqrt(e/(N+1.0_dp))*u(1,:)
-  
-  !Write data
-  open(1,file="modal_energy",status="replace")
-  write(1,*) N,dt
-  write(1,*) e,para
-  
+
+
+  print*, (1.0_dp/sin((m*pi/(2*N+2.0_dp))))*sqrt(e/(N+1.0_dp))
+
+
+  u(1,1,:) = (1.0_dp/sin((m*pi/(2*N+2.0_dp))))*sqrt(e/(N+1.0_dp))*u(1,1,:)
+
   !Integration
-  do t=1,it_max-1 !SABA2C
-  !Normal modes transformation
-  do k=1,modes
-    a(:,k) = u(:,1) 
-    do j=2,N+1
-      a(:,k) = a(:,k) + sqrt(2.0_dp/(N+1.0_dp))*u(:,j)*sin(pi*(j-1.0_dp)*k/(N+1.0_dp))
+  do i=1,it_max-1 !SABA2C
+    t(i+1) = t(i) + dt
+    !eLc
+    u(1,i+1,:) = u(1,i,:)
+    u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
+    !SABA2
+    u(1,i+1,:) = eLa(u(:,i+1,:),c1,dt,N)
+    u(2,i+1,:) = eLb(u(:,i+1,:),dt,N,para)
+    u(1,i+1,:) = eLa(u(:,i+1,:),c2,dt,N)
+    u(2,i+1,:) = eLb(u(:,i+1,:),dt,N,para)
+    u(1,i+1,:) = eLa(u(:,i+1,:),c1,dt,N)
+    !eLc
+    u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
+    do k=1,jumps-1 !SABA2C 
+    !Second loops exists so not all iterations are stored and kept
+      t(i+1) = t(i+1) + dt
+      !eLc
+      u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
+      !SABA
+      u(1,i+1,:) = eLa(u(:,i+1,:),c1,dt,N)
+      u(2,i+1,:) = eLb(u(:,i+1,:),dt,N,para)
+      u(1,i+1,:) = eLa(u(:,i+1,:),c2,dt,N)
+      u(2,i+1,:) = eLb(u(:,i+1,:),dt,N,para)
+      u(1,i+1,:) = eLa(u(:,i+1,:),c1,dt,N)
+      !eLc
+      u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     end do
   end do
+
+  !u(:,1,:) = u(:,it_max,:)
+  !dt=-dt
+  !t(1) = t(it_max)
+
+
+
+
+  print*,'integration completed'
+
+
+  !Normal modes transformation
+  do k=1,modes
+    a(:,:,k) = u(:,:,1) 
+    do i=2,N+1
+      a(:,:,k) = a(:,:,k) + sqrt(2.0_dp/(N+1.0_dp))*u(:,:,i)*sin(pi*(i-1.0_dp)*k/(N+1.0_dp))
+    end do
+  end do
+  print*,'canonical transformation completed'
+
   !Normal mode energy
   !$omp parallel do
   do k=1,modes
-    nm_energy(k) = (0.5_dp)*(a(2,k))**2+2.0_dp*((sin(pi*k/(2.0_dp*N+2.0_dp)))**2)*(a(1,k))**2
+    nm_energy(:,k) = (0.5_dp)*(a(2,:,k))**2+2.0_dp*((sin(pi*k/(2.0_dp*N+2.0_dp)))**2)*(a(1,:,k))**2
     do i=1,N
       do j=1,N
-          nm_energy(k) = nm_energy(k)+(8*para/(3*sqrt(2.0_dp*N+2.0_dp))) &
+          nm_energy(:,k) = nm_energy(:,k)+(8*para/(3*sqrt(2.0_dp*N+2.0_dp))) &
                           *sin(pi*k/(2.0_dp*N+2.0_dp))*sin(pi*i/(2.0_dp*N+2.0_dp))*sin(pi*j/(2.0_dp*N+2.0_dp)) &
                           *(kd(k+i+j,N)+kd(k+i-j,N)+kd(k-i+j,N)+kd(k-i-j,N) ) &
-                          *a(1,k)*a(1,i)*a(1,j)
+                          *a(1,:,k)*a(1,:,i)*a(1,:,j)
       end do 
     end do
   end do
   !$omp end parallel do
-  write(1,*) (t-1)*spacing,nm_energy(:)
-  !write(1,*) (it_max-t-1)*spacing,nm_energy(:)
-    !eLc
-    u(2,:) = eLc(u(:,:),dt,N,para)
-    !SABA2
-    u(1,:) = eLa(u(:,:),c1,dt,N)
-    u(2,:) = eLb(u(:,:),dt,N,para)
-    u(1,:) = eLa(u(:,:),c2,dt,N)
-    u(2,:) = eLb(u(:,:),dt,N,para)
-    u(1,:) = eLa(u(:,:),c1,dt,N)
-    !eLc
-    u(2,:) = eLc(u(:,:),dt,N,para)
-    do k=1,jumps-1 !SABA2C 
-    !Second loops exists so not all iterations are stored and kept
-      !eLc
-      u(2,:) = eLc(u(:,:),dt,N,para)
-      !SABA
-      u(1,:) = eLa(u(:,:),c1,dt,N)
-      u(2,:) = eLb(u(:,:),dt,N,para)
-      u(1,:) = eLa(u(:,:),c2,dt,N)
-      u(2,:) = eLb(u(:,:),dt,N,para)
-      u(1,:) = eLa(u(:,:),c1,dt,N)
-      !eLc
-      u(2,:) = eLc(u(:,:),dt,N,para)
-    end do
+
+  !Write data
+  print*,'writing data to file...'
+  open(1,file="modal_energy",status="replace")
+  write(1,*) N, dt 
+  write(1,*) e, para
+  do i = 1,it_max
+    write(1,*) t(i), nm_energy(i,:)
   end do
-
-  !dt=-dt
-
-
   close(1)
   print*,'done'
-  
 
 
 end program fpu
