@@ -222,6 +222,7 @@ program fpu
 	s = (sum(nm_energy(:)/e*log(abs(nm_energy(:)/e))))/log(1.0_dp*CEILING(N/2.0))+1
 	!print
 	print*, (i-1)*spacing, s
+	!write(1,*) (it_max-t-1)*spacing,s
     !eLc
     u(2,:) = eLc(u(:,:),dt,N,para)
     !SABA2
