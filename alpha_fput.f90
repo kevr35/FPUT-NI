@@ -200,7 +200,6 @@ u(1,:) = (1.0_dp/sin((m*pi/(2*N+2.0_dp))))*sqrt(e/(N+1.0_dp))*u(1,:)
   write(1,*) (t-1)*spacing,nm_energy(:)
   !write(1,*) (it_max-t-1)*spacing,nm_energy(:)
     !eLc
-    u(1,:) = u(1,:)
     u(2,:) = eLc(u(:,:),dt,N,para)
     !SABA2
     u(1,:) = eLa(u(:,:),c1,dt,N)
