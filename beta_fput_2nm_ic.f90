@@ -251,7 +251,7 @@ program fpu
     e2 = e2 + (0.5_dp)*(u(1,1,i+1)-u(1,1,i))**2
   end do
   
-  u(1,:) = find_amp(e,N,para,pi)*u(1,:)
+  u(1,1,:) = find_amp(e,N,para,pi)*u(1,1,:)
   print*, find_amp(e,N,para,pi)
   !Integration
   do i=1,it_max-1 !SABA2C
