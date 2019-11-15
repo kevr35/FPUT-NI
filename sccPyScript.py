@@ -79,7 +79,7 @@ for N in Sizes:
       if S < 10:
         time=(0.2024+0.0227*S)*(N+1)**3
       else:
-        time = (0.5862 / S**(1/2))*(N+1)**3
+        time = (0.5862 / S**(.5))*(N+1)**3
       
 
       SubmitJob(job_name = job_name, E=E, N=N, time=time)
