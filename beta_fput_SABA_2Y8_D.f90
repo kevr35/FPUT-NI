@@ -1,7 +1,7 @@
 module functions
 implicit none
 contains
-    function find_amp(e,N,b,pi) result(A)
+  function find_amp(e,N,b,pi) result(A)
     integer, parameter :: dp=selected_real_kind(15,307)
     real(dp) :: A
     real(dp), intent(in) :: e,b,pi
@@ -52,33 +52,24 @@ contains
     integer ::  i
 
     x(1) = 0.0_dp
-    
-    
+    !$omp parallel do
+    do i=2,(N+2)/2
+      x(i) = u(2,i)+d*dt*( -2.0_dp*u(1,i)+u(1,i+1)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (u(1,i+1)-u(1,i))**(3) ) )
+    end do
+    !$omp end parallel do
 
     if (mod(N,2)==0) then !N is even
-      !$omp parallel do
-      do i=2,(N/2)
-        x(i) = u(2,i)+d*dt*( -2.0_dp*u(1,i)+u(1,i+1)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (u(1,i+1)-u(1,i))**(3) ) )
-      end do 
-      !$omp end parallel do
-      i=(N/2)+1
-      x(i) = u(2,i)+d*dt*( -3.0_dp*u(1,i)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (-2.0_dp*u(1,i))**(3) ) )
-      
       do i=(N+2)/2+1, N+2
-        x(i) = -x(N+3-i)
+        x(i) = x(N+3-i)
       end do
 
     else !N is odd
-      !$omp parallel do
-      do i=2,(N+2)/2
-        x(i) = u(2,i)+d*dt*( -2.0_dp*u(1,i)+u(1,i+1)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (u(1,i+1)-u(1,i))**(3) ) )
-      end do 
-      !$omp end parallel do
-      x((N+4)/2) = 0.0_dp
-      x((N+6)/2) = -x((N+2)/2)
 
-      do i=(N+8)/2, N+2
-        x(i) = -x(N+3-i)
+      i = (N+4)/2
+      x(i) = u(2,i)+d*dt*( -2.0_dp*u(1,i)+u(1,i+1)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (u(1,i+1)-u(1,i))**(3) ) )
+      
+      do i=(N+6)/2, N+2
+        x(i) = x(N+3-i)
       end do  
 
     end if
@@ -102,84 +93,58 @@ contains
                + ( 2.0_dp*u(1,2)-u(1,3)+para*( (u(1,2))**(3) - (u(1,3)-u(1,2))**(3) ) ) &
                *( 2.0_dp+para*(2)*( (u(1,2))**2 + (u(1,3)-u(1,2))**2  ) ) ) 
 
+    !$omp parallel do
+    do i=3,(N+2)/2
+      x(i) = u(2,i)+c*(2.0_dp)*((2.0_dp*u(1,i+1)-u(1,i+2)-u(1,i)+para*((u(1,i+1)-u(1,i))**(3)-(u(1,i+2)-u(1,i+1))**(3))) &
+           *( 1+para*(2)*(u(1,i+1)-u(1,i))**2 ) &
+           + ( -2.0_dp*u(1,i)+u(1,i+1)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (u(1,i+1)-u(1,i))**(3) ) ) &
+           *( 2.0_dp+para*(2)*( (u(1,i)-u(1,i-1))**2 + (u(1,i+1)-u(1,i))**2 ) ) & 
+           + ( 2.0_dp*u(1,i-1)-u(1,i)-u(1,i-2)+para*( (u(1,i-1)-u(1,i-2))**(3) - (u(1,i)-u(1,i-1))**(3) ) ) &
+           *( 1.0_dp+para*(2)*(u(1,i)-u(1,i-1))**2 ) ) 
+    end do
+    !$omp end parallel do
+
     if (mod(N,2)==0) then !N is even
-
-      !$omp parallel do
-      do i=3,N/2-1
-        x(i) = u(2,i)+c*(2.0_dp)*((2.0_dp*u(1,i+1)-u(1,i+2)-u(1,i)+para*((u(1,i+1)-u(1,i))**(3)-(u(1,i+2)-u(1,i+1))**(3))) &
-             *( 1+para*(2)*(u(1,i+1)-u(1,i))**2 ) &
-             + ( -2.0_dp*u(1,i)+u(1,i+1)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (u(1,i+1)-u(1,i))**(3) ) ) &
-             *( 2.0_dp+para*(2)*( (u(1,i)-u(1,i-1))**2 + (u(1,i+1)-u(1,i))**2 ) ) & 
-             + ( 2.0_dp*u(1,i-1)-u(1,i)-u(1,i-2)+para*( (u(1,i-1)-u(1,i-2))**(3) - (u(1,i)-u(1,i-1))**(3) ) ) &
-             *( 1.0_dp+para*(2)*(u(1,i)-u(1,i-1))**2 ) ) 
-      end do
-      !$omp end parallel do
-      i=N/2
-      x(i) = u(2,i)+c*(2.0_dp)*((3.0_dp*u(1,i+1)-u(1,i)+para*((u(1,i+1)-u(1,i))**(3)-(-2.0_dp*u(1,i+1))**(3))) &
-             *( 1+para*(2)*(u(1,i+1)-u(1,i))**2 ) &
-             + ( -2.0_dp*u(1,i)+u(1,i+1)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (u(1,i+1)-u(1,i))**(3) ) ) &
-             *( 2.0_dp+para*(2)*( (u(1,i)-u(1,i-1))**2 + (u(1,i+1)-u(1,i))**2 ) ) & 
-             + ( 2.0_dp*u(1,i-1)-u(1,i)-u(1,i-2)+para*( (u(1,i-1)-u(1,i-2))**(3) - (u(1,i)-u(1,i-1))**(3) ) ) &
-             *( 1.0_dp+para*(2)*(u(1,i)-u(1,i-1))**2 ) ) 
-      i=(N/2)+1
-      x(i) = u(2,i)+c*(2.0_dp)*((u(1,i-1)-3.0_dp*u(1,i)+para*((-2.0_dp*u(1,i))**(3)-(-u(1,i-1)+u(1,i))**(3))) &
-            *( 1+para*(2)*(-2.0_dp*u(1,i))**2 ) &
-            + ( -3.0_dp*u(1,i)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (-2.0_dp*u(1,i))**(3) ) ) &
-            *( 2.0_dp+para*(2)*( (u(1,i)-u(1,i-1))**2 + (-2.0_dp*u(1,i))**2 ) ) & 
-            + ( 2.0_dp*u(1,i-1)-u(1,i)-u(1,i-2)+para*( (u(1,i-1)-u(1,i-2))**(3) - (u(1,i)-u(1,i-1))**(3) ) ) &
-            *( 1.0_dp+para*(2)*(u(1,i)-u(1,i-1))**2 ) )   
-     
-
       do i=(N+2)/2+1, N+2
-        x(i) = -x(N+3-i)
+        x(i) = x(N+3-i)
       end do
 
     else !N is odd
 
-      !$omp parallel do
-      do i=3,N/2
-        x(i) = u(2,i)+c*(2.0_dp)*((2.0_dp*u(1,i+1)-u(1,i+2)-u(1,i)+para*((u(1,i+1)-u(1,i))**(3)-(u(1,i+2)-u(1,i+1))**(3))) &
-             *( 1+para*(2)*(u(1,i+1)-u(1,i))**2 ) &
-             + ( -2.0_dp*u(1,i)+u(1,i+1)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (u(1,i+1)-u(1,i))**(3) ) ) &
-             *( 2.0_dp+para*(2)*( (u(1,i)-u(1,i-1))**2 + (u(1,i+1)-u(1,i))**2 ) ) & 
-             + ( 2.0_dp*u(1,i-1)-u(1,i)-u(1,i-2)+para*( (u(1,i-1)-u(1,i-2))**(3) - (u(1,i)-u(1,i-1))**(3) ) ) &
-             *( 1.0_dp+para*(2)*(u(1,i)-u(1,i-1))**2 ) ) 
-      end do
-      !$omp end parallel do
-      i=N/2+1
-      x(i) = u(2,i)+c*(2.0_dp)*(( -2.0_dp*u(1,i)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (-u(1,i))**(3) ) ) &
-             *( 2.0_dp+para*(2)*( (u(1,i)-u(1,i-1))**2 + (-u(1,i))**2 ) ) & 
-             + ( 2.0_dp*u(1,i-1)-u(1,i)-u(1,i-2)+para*( (u(1,i-1)-u(1,i-2))**(3) - (u(1,i)-u(1,i-1))**(3) ) ) &
-             *( 1.0_dp+para*(2)*(u(1,i)-u(1,i-1))**2 ) ) 
+      i = (N+4)/2
+      x(i) = u(2,i)+c*(2.0_dp)*((2.0_dp*u(1,i+1)-u(1,i+2)-u(1,i)+para*((u(1,i+1)-u(1,i))**(3)-(u(1,i+2)-u(1,i+1))**(3))) &
+           *( 1+para*(2)*(u(1,i+1)-u(1,i))**2 ) &
+           + ( -2.0_dp*u(1,i)+u(1,i+1)+u(1,i-1)+para*( -(u(1,i)-u(1,i-1))**(3) + (u(1,i+1)-u(1,i))**(3) ) ) &
+           *( 2.0_dp+para*(2)*( (u(1,i)-u(1,i-1))**2- (u(1,i+1)-u(1,i))**2 ) ) & 
+           + ( 2.0_dp*u(1,i-1)-u(1,i)-u(1,i-2)+para*( (u(1,i-1)-u(1,i-2))**(3) - (u(1,i)-u(1,i-1))**(3) ) ) &
+           *( 1.0_dp+para*(2)*(u(1,i)-u(1,i-1))**2 ) ) 
 
-      x((N+4)/2) = 0.0_dp
-      x((N+6)/2) = -x((N+2)/2)
-
-      do i=(N+8)/2, N+2
-        x(i) = -x(N+3-i)
+      do i=(N+6)/2, N+2
+        x(i) = x(N+3-i)
       end do  
 
     end if
 
   
   end function
-  
-  
+
+
   function SABA2(u,dt,N,para,w) result(x)
     !Operator corresponding to the kinetic part of the Hamiltonian
     integer, parameter :: dp=selected_real_kind(15,307)
     integer, intent(in) :: N
 	real(dp), parameter :: c1=(sqrt(3.0_dp)-1.0_dp)/(2.0_dp*sqrt(3.0_dp)), c2=1.0_dp/(sqrt(3.0_dp)),d1=0.5_dp
     real(dp), intent(in) :: u(:,:), dt, para,w
-    real(dp) :: x(N+2,N+2)
+    real(dp) :: x(2,N+2)
     integer :: i
 
-    x(1,:) = eLa(u(:,:),w*c1,dt,N)
-    x(2,:) = eLb(u(:,:),w*d1,dt,N,para)
-    x(1,:) = eLa(u(:,:),w*c2,dt,N)
-    x(2,:) = eLb(u(:,:),w*d1,dt,N,para)
-    x(1,:) = eLa(u(:,:),w*c1,dt,N)
+    x(1,:) = eLa(u,w*c1,dt,N)
+    x(2,:) = eLb(x,w*d1,dt,N,para)
+    x(1,:) = eLa(x,w*c2,dt,N)
+    x(2,:) = eLb(x,w*d1,dt,N,para)
+    x(1,:) = eLa(x,w*c1,dt,N)
   end function
+
 
 end module
 
@@ -189,24 +154,31 @@ program fpu
   integer, parameter :: dp=selected_real_kind(15,307)
   integer :: N, i, j,l,k, it_max, modes, m=1,jumps
   real(dp), parameter :: pi=4.0_dp*atan(1.0_dp)
-  real(dp) :: dt=0.01_dp, para, max_time, e, e1=0.0_dp, e2=0.0_dp
+  real(dp) :: dt, para, max_time, e
   real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:), T(:), energy(:), p(:,:)
 
-  write(*, '("Enter the number of active particles: ")', &
+  !read *, N
+  !read *, e
+  !read *, max_time
+  !write(*, '("Enter the value of beta: ")', &
+  !  advance='no')
+  !read *, para
+  para = 1.0_dp
+  
+   write(*, '("Enter the number of active particles: ")', &
     advance='no')
   read *, N
   write(*, '("Enter the value of energy*beta: ")', &
     advance='no')
   read *, e
-  !write(*, '("Enter the value of beta: ")', &
-  !  advance='no')
-  !read *, para
-  para = 1.0_dp
-  jumps = 2/dt
-
   write(*, '("Enter the maximum time: ")', &
     advance='no')
-  read *, max_time
+  read *, max_time  
+
+  
+  !read *, dt
+  dt=0.1
+  jumps = 5/dt+dt
   it_max = max_time/(dt*jumps)
   !write(*, '("Enter the number of linear modes to be recorded: ")', &
   !  advance='no')
@@ -232,10 +204,7 @@ program fpu
     else !N is odd
       u(1,1,(N+2)/2+1) = 0.0_dp
       u(2,1,(N+2)/2+1) = 0.0_dp
-      u(1,1,(N+6)/2) = -u(1,1,(N+2)/2)
-      u(2,1,(N+6)/2) = -u(2,1,(N+2)/2)
-
-      do i=(N+2)/2+3, N+2
+      do i=(N+2)/2+2, N+2
         u(1,1,i) = -u(1,1,N+3-i)
         u(2,1,i) = -u(2,1,N+3-i)
       end do  
@@ -260,24 +229,17 @@ program fpu
     end if
 
   end if
-
-  do i=1,N+1
-    e1 = e1 + (para/4.0_dp)*(u(1,1,i+1)-u(1,1,i))**4
-  end do
-  do i=1,N+1
-    e2 = e2 + (0.5_dp)*(u(1,1,i+1)-u(1,1,i))**2
-  end do
+  
   
   u(1,1,:) = find_amp(e,N,para,pi)*u(1,1,:)
-  print*, find_amp(e,N,para,pi)
   !Integration
   do i=1,it_max-1 !SABA2C
     t(i+1) = t(i) + dt
     !eLc
     u(1,i+1,:) = u(1,i,:)
     u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
-    !SABA2
-	u(:,i+1,:)=SABA2(u(:,i+1,:),dt,N,para,1.0_dp)
+    !SABA
+    u(:,i+1,:)=SABA2(u(:,i+1,:),dt,N,para,1.0_dp)
     !eLc
     u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     do k=1,jumps-1 !SABA2C 
@@ -291,49 +253,21 @@ program fpu
       u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     end do
   end do
-  ! u(:,1,:) = u(:,it_max,:)
-  ! dt=-dt
-  ! t(1) = t(it_max)
-  ! do i=1,it_max-1 !SABA2C
-  !   t(i+1) = t(i) + dt
-  !   !eLc
-  !   u(1,i+1,:) = u(1,i,:)
-  !   u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
-  !   !SABA2
-  !   u(1,i+1,:) = eLa(u(:,i+1,:),c1,dt,N)
-  !   u(2,i+1,:) = eLb(u(:,i+1,:),dt,N,para)
-  !   u(1,i+1,:) = eLa(u(:,i+1,:),c2,dt,N)
-  !   u(2,i+1,:) = eLb(u(:,i+1,:),dt,N,para)
-  !   u(1,i+1,:) = eLa(u(:,i+1,:),c1,dt,N)
-  !   !eLc
-  !   u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
-  !   do k=1,jumps-1 !SABA2C 
-  !   !Second loops exists so not all iterations are stored and kept
-  !     t(i+1) = t(i+1) + dt
-  !     !eLc
-  !     u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
-  !     !SABA
-  !     u(1,i+1,:) = eLa(u(:,i+1,:),c1,dt,N)
-  !     u(2,i+1,:) = eLb(u(:,i+1,:),dt,N,para)
-  !     u(1,i+1,:) = eLa(u(:,i+1,:),c2,dt,N)
-  !     u(2,i+1,:) = eLb(u(:,i+1,:),dt,N,para)
-  !     u(1,i+1,:) = eLa(u(:,i+1,:),c1,dt,N)
-  !     !eLc
-  !     u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
-  !   end do
-  ! end do
+  
+  !time reversal
+  !u(:,1,:) = u(:,it_max,:)
+  !dt=-dt
+  !t(1) = t(it_max)
 
-  print*,'integration completed'
 
 
   !Normal modes transformation
   do k=1,N
     a(:,:,k) = u(:,:,1) 
-    do i=1,N+1
+    do i=2,N+1
       a(:,:,k) = a(:,:,k) + sqrt(2.0_dp/(N+1.0_dp))*u(:,:,i)*sin(pi*(i-1.0_dp)*k/(N+1.0_dp))
     end do
   end do
-  print*,'canonical transformation completed'
 
   !Normal mode energy
   !$omp parallel do
@@ -346,7 +280,7 @@ program fpu
                             *sin(pi*j/(2.0_dp*N+2.0_dp))*sin(pi*l/(2.0_dp*N+2.0_dp)) &
                             *(kd(k+i+j+l,N)+kd(k+i+j-l,N)+kd(k+i-j+l,N)+kd(k-i+j+l,N) &
                             +kd(k+i-j-l,N)+kd(k-i-j+l,N)+kd(k-i+j-l,N)+kd(k-i-j-l,N) ) &
-                           *a(1,:,k)*a(1,:,i)*a(1,:,j)*a(1,:,l)
+                            *a(1,:,k)*a(1,:,i)*a(1,:,j)*a(1,:,l)
         end do
       end do 
     end do
@@ -358,9 +292,16 @@ program fpu
   open(1,file="NEW_modal_energy",status="replace")
   write(1,*) N, e
   do i = 1,it_max
-    write(1,*) t(i), nm_energy(i,:)
+    write(1,*) t(i), u(1,i,:)
   end do
   close(1)
   print*,'done'
+  
+  !Write data
+  !print*, N, dt
+  !print*, para, e
+  !do i = 1,it_max
+   ! print*, t(i), nm_energy(i,:)
+  !end do
 
 end program fpu
