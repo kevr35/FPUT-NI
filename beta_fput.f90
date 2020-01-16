@@ -158,7 +158,7 @@ program fpu
   
   !read *, dt
   dt=0.1
-  jumps = 5/dt
+  jumps = 5/dt+1
   it_max = max_time/(dt*jumps)
   !write(*, '("Enter the number of linear modes to be recorded: ")', &
   !  advance='no')
@@ -210,7 +210,6 @@ program fpu
 
   end if
 
-  
   u(1,1,:) = find_amp(e,N,para,pi)*u(1,1,:)
   !Integration
   do i=1,it_max-1 !SABA2C
@@ -279,7 +278,8 @@ program fpu
   !Write data
   print*,'writing data to file...'
   open(1,file="modal_energy",status="replace")
-  write(1,*) N, e
+  write(1,*) N, dt
+  write(1,*) e, para
   do i = 1,it_max
     write(1,*) t(i), nm_energy(i,:)
   end do
