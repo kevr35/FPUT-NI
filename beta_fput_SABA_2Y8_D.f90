@@ -129,20 +129,46 @@ contains
   end function
 
 
-  function SABA2(u,dt,N,para,w) result(x)
+  function SABA2(u,dt,N,para) result(x)
     !Operator corresponding to the kinetic part of the Hamiltonian
     integer, parameter :: dp=selected_real_kind(15,307)
     integer, intent(in) :: N
 	real(dp), parameter :: c1=(sqrt(3.0_dp)-1.0_dp)/(2.0_dp*sqrt(3.0_dp)), c2=1.0_dp/(sqrt(3.0_dp)),d1=0.5_dp
-    real(dp), intent(in) :: u(:,:), dt, para,w
+    real(dp), intent(in) :: u(:,:), dt, para
     real(dp) :: x(2,N+2)
-    integer :: i
 
-    x(1,:) = eLa(u,w*c1,dt,N)
-    x(2,:) = eLb(x,w*d1,dt,N,para)
-    x(1,:) = eLa(x,w*c2,dt,N)
-    x(2,:) = eLb(x,w*d1,dt,N,para)
-    x(1,:) = eLa(x,w*c1,dt,N)
+    x(1,:) = eLa(u,c1,dt,N)
+    x(2,:) = eLb(x,d1,dt,N,para)
+    x(1,:) = eLa(x,c2,dt,N)
+    x(2,:) = eLb(x,d1,dt,N,para)
+    x(1,:) = eLa(x,c1,dt,N)
+  end function
+  
+  
+  function SABA_2Y8_D(u,dt,N,para) result(x)
+    !Operator corresponding to the kinetic part of the Hamiltonian
+    integer, parameter :: dp=selected_real_kind(15,307)
+    integer, intent(in) :: N
+	real(dp), parameter :: w7=0.91484424622974_dp,w6=0.253693336566229_dp,w5=-1.44485223686048_dp,w4=-0.158240635368243_dp
+	real(dp), parameter :: w3=1.93813913762276_dp,w2=-1.96061023297549_dp,w1=0.102799849391985_dp,w0=1.7084530707869988_dp
+    real(dp), intent(in) :: u(:,:), dt, para
+    real(dp) :: x(2,N+2)
+
+	x=SABA2(u,w7*dt,N,para)
+	x=SABA2(x,w6*dt,N,para)
+	x=SABA2(x,w5*dt,N,para)
+	x=SABA2(x,w4*dt,N,para)
+	x=SABA2(x,w3*dt,N,para)
+	x=SABA2(x,w2*dt,N,para)
+	x=SABA2(x,w1*dt,N,para)
+	x=SABA2(x,w0*dt,N,para)
+	x=SABA2(x,w1*dt,N,para)
+	x=SABA2(x,w2*dt,N,para)
+	x=SABA2(x,w3*dt,N,para)
+	x=SABA2(x,w4*dt,N,para)
+	x=SABA2(x,w5*dt,N,para)
+	x=SABA2(x,w6*dt,N,para)
+	x=SABA2(x,w7*dt,N,para)
   end function
 
 
@@ -154,8 +180,11 @@ program fpu
   integer, parameter :: dp=selected_real_kind(15,307)
   integer :: N, i, j,l,k, it_max, modes, m=1,jumps
   real(dp), parameter :: pi=4.0_dp*atan(1.0_dp)
+  real(dp), parameter :: w7=0.91484424622974_dp,w6=0.253693336566229_dp,w5=-1.44485223686048_dp,w4=-0.158240635368243_dp
+  real(dp), parameter :: w3=1.93813913762276_dp,w2=-1.96061023297549_dp,w1=0.102799849391985_dp,w0=1.7084530707869979_dp
   real(dp) :: dt, para, max_time, e
-  real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:), T(:), energy(:), p(:,:)
+  real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:), T(:)
+  
 
   !read *, N
   !read *, e
@@ -177,13 +206,13 @@ program fpu
 
   
   !read *, dt
-  dt=0.1
+  dt=0.1_dp
   jumps = 5/dt+dt
   it_max = max_time/(dt*jumps)
   !write(*, '("Enter the number of linear modes to be recorded: ")', &
   !  advance='no')
   !read *, modes
-  modes = 1
+  modes = N
   allocate( u(2,it_max,N+2),a(2,it_max,N), nm_energy(it_max,modes), t(it_max)  )
   !Initial Conditions
   t(1) = 0.0_dp
@@ -238,8 +267,8 @@ program fpu
     !eLc
     u(1,i+1,:) = u(1,i,:)
     u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
-    !SABA
-    u(:,i+1,:)=SABA2(u(:,i+1,:),dt,N,para,1.0_dp)
+    !SABA_2Y8_D
+    u(:,i+1,:)=SABA_2Y8_D(u(:,i+1,:),dt,N,para)
     !eLc
     u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     do k=1,jumps-1 !SABA2C 
@@ -247,8 +276,8 @@ program fpu
       t(i+1) = t(i+1) + dt
       !eLc
       u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
-      !SABA
-      u(:,i+1,:)=SABA2(u(:,i+1,:),dt,N,para,1.0_dp)
+      !SABA_2Y8_D
+      u(:,i+1,:)=SABA_2Y8_D(u(:,i+1,:),dt,N,para)
       !eLc
       u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     end do
@@ -289,19 +318,20 @@ program fpu
 
   !Write data
   print*,'writing data to file...'
-  open(1,file="NEW_modal_energy",status="replace")
-  write(1,*) N, e
-  do i = 1,it_max
-    write(1,*) t(i), u(1,i,:)
-  end do
-  close(1)
-  print*,'done'
+  !open(1,file="NEW_modal_energy",status="replace")
+  !write(1,*) N, dt
+  !write(1,*) e, para
+  !do i = 1,it_max
+  !  write(1,*) t(i), nm_energy(i,:)
+  !end do
+  !close(1)
+  !print*,'done'
   
   !Write data
-  !print*, N, dt
-  !print*, para, e
-  !do i = 1,it_max
-   ! print*, t(i), nm_energy(i,:)
-  !end do
+  print*, N, dt
+  print*, para, e
+  do i = 1,it_max
+    print*, t(i), sum(nm_energy(i,:))
+  end do
 
 end program fpu
