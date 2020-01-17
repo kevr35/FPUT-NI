@@ -129,19 +129,36 @@ contains
   end function
 
 
-  function SABA2(u,dt,N,para) result(x)
+  function SABA2(u,wdt,N,para) result(x)
     !Operator corresponding to the kinetic part of the Hamiltonian
     integer, parameter :: dp=selected_real_kind(15,307)
     integer, intent(in) :: N
 	real(dp), parameter :: c1=(sqrt(3.0_dp)-1.0_dp)/(2.0_dp*sqrt(3.0_dp)), c2=1.0_dp/(sqrt(3.0_dp)),d1=0.5_dp
+    real(dp), intent(in) :: u(:,:), wdt, para
+    real(dp) :: x(2,N+2)
+
+    x(1,:) = eLa(u,c1,wdt,N)
+    x(2,:) = eLb(x,d1,wdt,N,para)
+    x(1,:) = eLa(x,c2,wdt,N)
+    x(2,:) = eLb(x,d1,wdt,N,para)
+    x(1,:) = eLa(x,c1,wdt,N)
+  end function
+  
+  function SABA_2Y6(u,dt,N,para) result(x)
+    !Operator corresponding to the kinetic part of the Hamiltonian
+    integer, parameter :: dp=selected_real_kind(15,307)
+    integer, intent(in) :: N
+	real(dp), parameter :: w3=0.784513610477560_dp,w2=0.235573213359357_dp,w1=-1.17767998417887_dp,w0=1.315186320683906_dp
     real(dp), intent(in) :: u(:,:), dt, para
     real(dp) :: x(2,N+2)
 
-    x(1,:) = eLa(u,c1,dt,N)
-    x(2,:) = eLb(x,d1,dt,N,para)
-    x(1,:) = eLa(x,c2,dt,N)
-    x(2,:) = eLb(x,d1,dt,N,para)
-    x(1,:) = eLa(x,c1,dt,N)
+	x=SABA2(u,w3*dt,N,para)
+	x=SABA2(x,w2*dt,N,para)
+	x=SABA2(x,w1*dt,N,para)
+	x=SABA2(x,w0*dt,N,para)
+	x=SABA2(x,w1*dt,N,para)
+	x=SABA2(x,w2*dt,N,para)
+	x=SABA2(x,w3*dt,N,para)
   end function
   
   
@@ -268,7 +285,7 @@ program fpu
     u(1,i+1,:) = u(1,i,:)
     u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
     !SABA_2Y8_D
-    u(:,i+1,:)=SABA_2Y8_D(u(:,i+1,:),dt,N,para)
+    u(:,i+1,:)=SABA_2Y6(u(:,i+1,:),dt,N,para)
     !eLc
     u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     do k=1,jumps-1 !SABA2C 
@@ -277,7 +294,7 @@ program fpu
       !eLc
       u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
       !SABA_2Y8_D
-      u(:,i+1,:)=SABA_2Y8_D(u(:,i+1,:),dt,N,para)
+      u(:,i+1,:)=SABA_2Y6(u(:,i+1,:),dt,N,para)
       !eLc
       u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     end do
