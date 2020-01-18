@@ -134,10 +134,10 @@ program fpu
   use functions
   implicit none 
   integer, parameter :: dp=selected_real_kind(15,307)
-  integer :: N, i, j,l,k, it_max, modes, m=1,jumps
+  integer :: N, i, j,l,k, it_max, modes, m=1,jumps, spacing
   real(dp), parameter :: pi=4.0_dp*atan(1.0_dp),c1=(sqrt(3.0_dp)-1.0_dp)/(2.0_dp*sqrt(3.0_dp)), c2=1.0_dp/(sqrt(3.0_dp)),d1=0.5_dp
-  real(dp) :: dt, para, max_time, e, e1=0.0_dp, e2=0.0_dp
-  real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:), T(:), energy(:), p(:,:)
+  real(dp) :: dt, para, max_time, e
+  real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:)
 
   !read *, N
   !read *, e
@@ -157,16 +157,16 @@ program fpu
   read *, max_time  
   
   !read *, dt
-  dt=0.1
-  jumps = 5/dt+1
-  it_max = max_time/(dt*jumps)
+  dt=0.1_dp
+  spacing=5
+  jumps = spacing/dt
+  it_max = max_time/spacing
   !write(*, '("Enter the number of linear modes to be recorded: ")', &
   !  advance='no')
   !read *, modes
   modes = 1
-  allocate( u(2,it_max,N+2),a(2,it_max,N), nm_energy(it_max,modes), t(it_max)  )
+  allocate( u(2,it_max,N+2),a(2,it_max,N), nm_energy(it_max,modes),   )
   !Initial Conditions
-  t(1) = 0.0_dp
   do i=1,(N+2)/2
     u(1,1,i) = sin(m*(i-1)*pi/(N+1))
     u(2,1,i) = 0.0_dp
@@ -213,7 +213,6 @@ program fpu
   u(1,1,:) = find_amp(e,N,para,pi)*u(1,1,:)
   !Integration
   do i=1,it_max-1 !SABA2C
-    t(i+1) = t(i) + dt
     !eLc
     u(1,i+1,:) = u(1,i,:)
     u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
@@ -227,7 +226,6 @@ program fpu
     u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     do k=1,jumps-1 !SABA2C 
     !Second loops exists so not all iterations are stored and kept
-      t(i+1) = t(i+1) + dt
       !eLc
       u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
       !SABA
@@ -281,7 +279,7 @@ program fpu
   write(1,*) N, dt
   write(1,*) e, para
   do i = 1,it_max
-    write(1,*) t(i), nm_energy(i,:)
+    write(1,*) (i-1)*spacing, nm_energy(i,:)
   end do
   close(1)
   print*,'done'
@@ -290,7 +288,7 @@ program fpu
   !print*, N, dt
   !print*, para, e
   !do i = 1,it_max
-   ! print*, t(i), nm_energy(i,:)
+   ! print*, (i-1)*spacing, nm_energy(i,:)
   !end do
 
 end program fpu

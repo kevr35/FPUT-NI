@@ -243,12 +243,12 @@ program fpu
   use functions
   implicit none 
   integer, parameter :: dp=selected_real_kind(15,307)
-  integer :: N, i, j,l,k, it_max, modes, m=1,jumps
+  integer :: N, i, j,l,k, it_max, modes, m=1,jumps,spacing
   real(dp), parameter :: pi=4.0_dp*atan(1.0_dp)
   real(dp), parameter :: w7=0.91484424622974_dp,w6=0.253693336566229_dp,w5=-1.44485223686048_dp,w4=-0.158240635368243_dp
   real(dp), parameter :: w3=1.93813913762276_dp,w2=-1.96061023297549_dp,w1=0.102799849391985_dp,w0=1.7084530707869979_dp
   real(dp) :: dt, para, max_time, e
-  real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:), T(:)
+  real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:)
  
 
   !read *, N
@@ -272,15 +272,15 @@ program fpu
   
   !read *, dt
   dt=0.1_dp
-  jumps = 5/dt+dt
-  it_max = max_time/(dt*jumps)
+  spacing=5
+  jumps = spacing/dt
+  it_max = max_time/spacing
   !write(*, '("Enter the number of linear modes to be recorded: ")', &
   !  advance='no')
   !read *, modes
-  modes = N
-  allocate( u(2,it_max,N+2),a(2,it_max,N), nm_energy(it_max,modes), t(it_max)  )
+  modes = 1
+  allocate( u(2,it_max,N+2),a(2,it_max,N), nm_energy(it_max,modes))
   !Initial Conditions
-  t(1) = 0.0_dp
   do i=1,(N+2)/2
     u(1,1,i) = sin(m*(i-1)*pi/(N+1))
     u(2,1,i) = 0.0_dp
@@ -328,22 +328,20 @@ program fpu
   u(1,1,:) = find_amp(e,N,para,pi)*u(1,1,:)
   !Integration
   do i=1,it_max-1 !SABA
-    t(i+1) = t(i) + dt
-    !eLc
     u(:,i+1,:) = u(:,i,:)
+	!Error Hamiltonian term to convert SABA2 to 4th order SI
     !u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
     !SABA_2Y8_D
     u(:,i+1,:)=SABA_2Y8_D(u(:,i+1,:),dt,N,para)
-    !eLc
+    !Error Hamiltonian term to convert SABA2 to 4th order SI
     !u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     do k=1,jumps-1 !SABA
     !Second loops exists so not all iterations are stored and kept
-      t(i+1) = t(i+1) + dt
-      !eLc
+      !Error Hamiltonian term to convert SABA2 to 4th order SI
       !u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
       !SABA_2Y8_D
       u(:,i+1,:)=SABA_2Y8_D(u(:,i+1,:),dt,N,para)
-      !eLc
+      !Error Hamiltonian term to convert SABA2 to 4th order SI
       !u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     end do
   end do
@@ -383,20 +381,20 @@ program fpu
 
   !Write data
   print*,'writing data to file...'
-  !open(1,file="NEW_modal_energy",status="replace")
-  !write(1,*) N, dt
-  !write(1,*) e, para
-  !do i = 1,it_max
-  !  write(1,*) t(i), nm_energy(i,:)
-  !end do
-  !close(1)
-  !print*,'done'
+  open(1,file="NEW_modal_energy",status="replace")
+  write(1,*) N, dt
+  write(1,*) e, para
+  do i = 1,it_max
+    write(1,*) (i-1)*spacing, nm_energy(i,:)
+  end do
+  close(1)
+  print*,'done'
   
   !Write data
-  print*, N, dt
-  print*, para, e
-  do i = 1,it_max
-    print*, t(i), sum(nm_energy(i,:))/e
-  end do
+  !print*, N, dt
+  !print*, para, e
+  !do i = 1,it_max
+  !  print*, (i-1)*spacing, nm_energy(i,:)
+  !end do
 
 end program fpu
