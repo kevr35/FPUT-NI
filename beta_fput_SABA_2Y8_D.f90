@@ -130,27 +130,75 @@ contains
 
 
   function SABA2(u,wdt,N,para) result(x)
-    !Operator corresponding to the kinetic part of the Hamiltonian
+    !2nd Order SI
     integer, parameter :: dp=selected_real_kind(15,307)
     integer, intent(in) :: N
 	real(dp), parameter :: c1=(sqrt(3.0_dp)-1.0_dp)/(2.0_dp*sqrt(3.0_dp)), c2=1.0_dp/(sqrt(3.0_dp)),d1=0.5_dp
     real(dp), intent(in) :: u(:,:), wdt, para
     real(dp) :: x(2,N+2)
-
-    x(1,:) = eLa(u,c1,wdt,N)
+	
+	x=u
+    x(1,:) = eLa(x,c1,wdt,N)
     x(2,:) = eLb(x,d1,wdt,N,para)
     x(1,:) = eLa(x,c2,wdt,N)
     x(2,:) = eLb(x,d1,wdt,N,para)
     x(1,:) = eLa(x,c1,wdt,N)
   end function
   
+   function SABA_2Y4(u,dt,N,para) result(x)
+    !2nd Order SI
+    integer, parameter :: dp=selected_real_kind(15,307)
+    integer, intent(in) :: N
+	real(dp), parameter :: d1=1/(2-2**(1/3.0_dp)),d0=-2**(1/3.0_dp)/(2-2**(1/3.0_dp))
+	real(dp), parameter :: a1=(sqrt(3.0_dp)-1.0_dp)/(2.0_dp*sqrt(3.0_dp)), a2=1.0_dp/(sqrt(3.0_dp)),b1=0.5_dp
+    real(dp), intent(in) :: u(:,:), dt, para
+    real(dp) :: x(2,N+2)
+	
+	x=u
+    x(1,:) = eLa(x,d1*a1,dt,N)
+    x(2,:) = eLb(x,d1*b1,dt,N,para)
+    x(1,:) = eLa(x,d1*a2,dt,N)
+    x(2,:) = eLb(x,d1*b1,dt,N,para)
+    x(1,:) = eLa(x,d1*a1+d0*a1,dt,N)
+    x(2,:) = eLb(x,d0*b1,dt,N,para)
+    x(1,:) = eLa(x,d0*a2,dt,N)
+    x(2,:) = eLb(x,d0*b1,dt,N,para)
+    x(1,:) = eLa(x,d1*a1+d0*a1,dt,N)
+    x(2,:) = eLb(x,d1*b1,dt,N,para)
+    x(1,:) = eLa(x,d1*a2,dt,N)
+    x(2,:) = eLb(x,d1*b1,dt,N,para)
+    x(1,:) = eLa(x,d1*a1,dt,N)
+
+  end function
+  
+  
+  function FR4(u,dt,N,para) result(x)
+    !4th Order SI
+    integer, parameter :: dp=selected_real_kind(15,307)
+    integer, intent(in) :: N
+	real(dp), parameter :: a1=1/(2*(2-2**(1/3.0_dp))), a2=(1-2**(1/3.0_dp))/(2*(2-2**(1/3.0_dp)))
+	real(dp), parameter :: b1=1/(2-2**(1/3.0_dp)),b2=-2**(1/3.0_dp)/(2-2**(1/3.0_dp))
+    real(dp), intent(in) :: u(:,:), dt, para
+    real(dp) :: x(2,N+2)
+
+	x=u
+    x(1,:) = eLa(x,a1,dt,N)
+    x(2,:) = eLb(x,b1,dt,N,para)
+    x(1,:) = eLa(x,a2,dt,N)
+    x(2,:) = eLb(x,b2,dt,N,para)
+    x(1,:) = eLa(x,a2,dt,N)
+	x(2,:) = eLb(x,b1,dt,N,para)
+	x(1,:) = eLa(x,a1,dt,N)
+  end function
+  
   function SABA_2Y6(u,dt,N,para) result(x)
-    !Operator corresponding to the kinetic part of the Hamiltonian
+    !6th Order SI
     integer, parameter :: dp=selected_real_kind(15,307)
     integer, intent(in) :: N
 	real(dp), parameter :: w3=0.784513610477560_dp,w2=0.235573213359357_dp,w1=-1.17767998417887_dp,w0=1.315186320683906_dp
     real(dp), intent(in) :: u(:,:), dt, para
     real(dp) :: x(2,N+2)
+	
 
 	x=SABA2(u,w3*dt,N,para)
 	x=SABA2(x,w2*dt,N,para)
@@ -163,7 +211,7 @@ contains
   
   
   function SABA_2Y8_D(u,dt,N,para) result(x)
-    !Operator corresponding to the kinetic part of the Hamiltonian
+    !8th Order SI
     integer, parameter :: dp=selected_real_kind(15,307)
     integer, intent(in) :: N
 	real(dp), parameter :: w7=0.91484424622974_dp,w6=0.253693336566229_dp,w5=-1.44485223686048_dp,w4=-0.158240635368243_dp
@@ -201,7 +249,7 @@ program fpu
   real(dp), parameter :: w3=1.93813913762276_dp,w2=-1.96061023297549_dp,w1=0.102799849391985_dp,w0=1.7084530707869979_dp
   real(dp) :: dt, para, max_time, e
   real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:), T(:)
-  
+ 
 
   !read *, N
   !read *, e
@@ -279,24 +327,24 @@ program fpu
   
   u(1,1,:) = find_amp(e,N,para,pi)*u(1,1,:)
   !Integration
-  do i=1,it_max-1 !SABA2C
+  do i=1,it_max-1 !SABA
     t(i+1) = t(i) + dt
     !eLc
-    u(1,i+1,:) = u(1,i,:)
-    u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
+    u(:,i+1,:) = u(:,i,:)
+    !u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
     !SABA_2Y8_D
-    u(:,i+1,:)=SABA_2Y6(u(:,i+1,:),dt,N,para)
+    u(:,i+1,:)=SABA_2Y8_D(u(:,i+1,:),dt,N,para)
     !eLc
-    u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
-    do k=1,jumps-1 !SABA2C 
+    !u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
+    do k=1,jumps-1 !SABA
     !Second loops exists so not all iterations are stored and kept
       t(i+1) = t(i+1) + dt
       !eLc
-      u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
+      !u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
       !SABA_2Y8_D
-      u(:,i+1,:)=SABA_2Y6(u(:,i+1,:),dt,N,para)
+      u(:,i+1,:)=SABA_2Y8_D(u(:,i+1,:),dt,N,para)
       !eLc
-      u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
+      !u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     end do
   end do
   
@@ -348,7 +396,7 @@ program fpu
   print*, N, dt
   print*, para, e
   do i = 1,it_max
-    print*, t(i), sum(nm_energy(i,:))
+    print*, t(i), sum(nm_energy(i,:))/e
   end do
 
 end program fpu
