@@ -1,4 +1,5 @@
 module functions
+use iso_fortran_env
 implicit none
 contains
   function find_amp(e,N,b,pi) result(A)
@@ -12,7 +13,8 @@ contains
 
   function kd(i,N) result(x)
     integer, parameter :: dp=selected_real_kind(15,307)
-    integer, intent(in) :: i, N
+    integer(kind=int64), intent(in) :: i
+    integer, intent(in) :: N
     integer :: x
 
     if (i==0) then
@@ -241,9 +243,11 @@ end module
 
 program fpu
   use functions
+  use iso_fortran_env
   implicit none 
   integer, parameter :: dp=selected_real_kind(15,307)
-  integer :: N, i, j,l,k, it_max, modes, m=1,jumps,spacing
+  integer :: N, modes, m=1
+  integer(kind=int64) :: i, j,l,k, it_max,jumps,spacing
   real(dp), parameter :: pi=4.0_dp*atan(1.0_dp)
   real(dp), parameter :: w7=0.91484424622974_dp,w6=0.253693336566229_dp,w5=-1.44485223686048_dp,w4=-0.158240635368243_dp
   real(dp), parameter :: w3=1.93813913762276_dp,w2=-1.96061023297549_dp,w1=0.102799849391985_dp,w0=1.7084530707869979_dp
