@@ -1,8 +1,8 @@
 import numpy as np
 import os
 
-
-def SubmitJob(job_name, E, N, time, project = 'frgeeeph', run_time='48:00:00', mem_per_core='8', num_cores='8'):
+#504:00:00
+def SubmitJob(job_name, E, N, time,dt, project = 'frgeeeph', run_time='10:00:00', mem_per_core='1', num_cores='1'):
 
    ###############################################
    # Create bash script used for the batch job
@@ -32,8 +32,8 @@ def SubmitJob(job_name, E, N, time, project = 'frgeeeph', run_time='48:00:00', m
    file.write("# Request a paralell environemtn with _ cores \n")
    file.write("#$ -pe omp "+num_cores+" \n \n")
    
-   #file.write("# Request to run on Engineering resources only \n")
-   #file.write("#$ -l buyin \n \n")
+   file.write("# Request to run on Engineering resources only \n")
+   file.write("#$ -l buyin \n \n")
 
    #file.write("# Number of GPUs per CPU requestedz \n")
    #file.write("#$ -l gpus=0.25 \n \n")
@@ -53,8 +53,10 @@ def SubmitJob(job_name, E, N, time, project = 'frgeeeph', run_time='48:00:00', m
    file.writelines(["N=", str(N), "\n \n"])
    file.writelines(["e=", str(E), "\n \n"])
    file.writelines(["time=", str(time), "\n \n"])
+   file.writelines(["dt=", str(dt), "\n \n"])
+   file.writelines(["spacing=", str(spacing), "\n \n"])
 
-   file.writelines(['echo -e \"$N\\n$e\\n$time\" |  ./pbeta \n'])
+   file.writelines(['echo -e \"$N\\n$e\\n$time\\n$dt\\n$spacing\" |  ./pbetalinentr8OD \n'])
 
    file.close()
 
@@ -67,19 +69,24 @@ def SubmitJob(job_name, E, N, time, project = 'frgeeeph', run_time='48:00:00', m
    os.system('rm '+filename)
 
 Sizes=[31]
-Energies=[1]
+Energies=[.61]
+#np.arange(.66,.695,.01)
 
 
 for N in Sizes:
    for E in Energies:
 
-      job_name = 'PBeta_EB='+str(round(E,3))+'_N=' + str(N)
-      S = E* (N+1)
+      job_name = 'PBetaEntropy_EB='+str(round(E,4))+'_N=' + str(N)+'_dt=.01'
       
-      if S < 10:
-        time=(0.2024+0.0227*S)*(N+1)**3
-      else:
-        time = (0.5862 / S**(.5))*(N+1)**3
+      
+      time=10**7
+      spacing=100
+      dt=.01
+  #    S = E* (N+1)
+   #   if S < 10:
+    #    time=1.5*(0.2024+0.0227*S)*(N+1)**3
+     # else:
+      #  time = 1.5*(0.5862 / S**(.5))*(N+1)**3
       
 
-      SubmitJob(job_name = job_name, E=E, N=N, time=time)
+      SubmitJob(job_name = job_name, E=E, N=N, time=time, dt=dt)
