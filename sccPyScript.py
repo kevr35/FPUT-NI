@@ -47,6 +47,9 @@ def SubmitJob(job_name, E, N, time,dt, project = 'frgeeeph', run_time='10:00:00'
 
    file.write("# Specify the output file name \n")
    file.writelines(["#$ -o ", job_name, "\n \n"])
+   
+   file.write("#Make the environment actually parallel\n")
+   file.write("export OMP_NUM_THREADS=$NSLOTS\n\n")
 
    # ----- Assign Variables -----
 
