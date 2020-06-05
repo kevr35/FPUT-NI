@@ -2,7 +2,6 @@ module toda_functions
 implicit none
 contains
 
-
   function find_amp(e1,e2,e) result(A)
     !Uses the secant method to find the zeros of a polynomial in the form f(x)=0
     integer, parameter :: dp=selected_real_kind(15,307)
