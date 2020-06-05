@@ -1,29 +1,13 @@
 module functions
 implicit none
 contains
-  function find_amp(e1,e2,e) result(A)
-    !Uses the secant method to find the zeros of a polynomial in the form f(x)=0
+      function find_amp(e,N,b,pi) result(A)
     integer, parameter :: dp=selected_real_kind(15,307)
-    real(dp), intent(in) :: e1,e2,e
-    real(dp) :: d, tol, f, x, x1, x2, A
-    integer :: i=1, limit=10000
+    real(dp) :: A
+    real(dp), intent(in) :: e,b,pi
+    integer, intent(in) :: N
 
-    f(x) = e1*x*x*x*x + e2*x*x - e
-    x1 = 0_dp; x2 = 10.0_dp ; tol = 1.0e-15_dp
-    do 
-      if (i > limit) then
-        print*, "Calculated amplitude not converging"
-        exit
-      end if
-      d = (x2 - x1) / (f(x2) - f(x1)) * f(x2)
-      if (abs(d) < tol) then
-        exit   
-      end if
-      x1 = x2
-      x2 = x2 - d
-      i = i + 1
-    end do
-    A = x2
+    A = sqrt((-1+sqrt(1+6*e*b/(N+1)))/(3*b))/sin(pi/(2*(N+1)))
   end function
 
   function kd(i,N) result(x)
@@ -228,8 +212,8 @@ program fpu
     e2 = e2 + (0.5_dp)*(u(1,1,i+1)-u(1,1,i))**2
   end do
   
-  u(1,1,:) = find_amp(e1,e2,e)*u(1,1,:)
-  print*, find_amp(e1,e2,e)
+  u(1,1,:) = find_amp(e,N,para,pi)*u(1,1,:)
+  print*, find_amp(e,N,para,pi)
   !Integration
   do i=1,it_max-1 !SABA2C
     t(i+1) = t(i) + dt

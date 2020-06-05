@@ -1,7 +1,7 @@
 module functions
 implicit none
 contains
-    function find_amp(e,N,b,pi) result(A)
+  function find_amp(e,N,b,pi) result(A)
     integer, parameter :: dp=selected_real_kind(15,307)
     real(dp) :: A
     real(dp), intent(in) :: e,b,pi
@@ -134,29 +134,39 @@ program fpu
   use functions
   implicit none 
   integer, parameter :: dp=selected_real_kind(15,307)
-  integer :: N, i, j,l,k, it_max, modes, m=1,jumps
+  integer :: N, i, j,l,k, it_max, modes, m=1,jumps, spacing
   real(dp), parameter :: pi=4.0_dp*atan(1.0_dp),c1=(sqrt(3.0_dp)-1.0_dp)/(2.0_dp*sqrt(3.0_dp)), c2=1.0_dp/(sqrt(3.0_dp)),d1=0.5_dp
-  real(dp) :: dt=0.1_dp, para, max_time, e, e1=0.0_dp, e2=0.0_dp
-  real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:), T(:), energy(:), s(:)
+  real(dp) :: dt, para, max_time, e
+  real(dp), allocatable :: u(:,:,:), a(:,:,:), nm_energy(:,:)
 
-
-
-  read *, N
-
-  read *, e
-  read *, max_time
+  !read *, N
+  !read *, e
+  !read *, max_time
+  !write(*, '("Enter the value of beta: ")', &
+  !  advance='no')
+  !read *, para
   para = 1.0_dp
-  jumps = 10/dt
-
-
-  it_max = max_time/(dt*jumps)
+   write(*, '("Enter the number of active particles: ")', &
+    advance='no')
+  read *, N
+  write(*, '("Enter the value of energy*beta: ")', &
+    advance='no')
+  read *, e
+  write(*, '("Enter the maximum time: ")', &
+    advance='no')
+  read *, max_time  
+  
+  !read *, dt
+  dt=0.1_dp
+  spacing=5
+  jumps = spacing/dt
+  it_max = max_time/spacing
   !write(*, '("Enter the number of linear modes to be recorded: ")', &
   !  advance='no')
   !read *, modes
-  modes = N
-  allocate( u(2,it_max,N+2),a(2,it_max,N), nm_energy(it_max,modes), t(it_max), s(it_max) )
+  modes = 1
+  allocate( u(2,it_max,N+2),a(2,it_max,N), nm_energy(it_max,modes),   )
   !Initial Conditions
-  t(1) = 0.0_dp
   do i=1,(N+2)/2
     u(1,1,i) = sin(m*(i-1)*pi/(N+1))
     u(2,1,i) = 0.0_dp
@@ -200,18 +210,9 @@ program fpu
 
   end if
 
-  do i=1,N+1
-    e1 = e1 + (para/4.0_dp)*(u(1,1,i+1)-u(1,1,i))**4
-  end do
-  do i=1,N+1
-    e2 = e2 + (0.5_dp)*(u(1,1,i+1)-u(1,1,i))**2
-  end do
-  
   u(1,1,:) = find_amp(e,N,para,pi)*u(1,1,:)
-
   !Integration
   do i=1,it_max-1 !SABA2C
-    t(i+1) = t(i) + dt
     !eLc
     u(1,i+1,:) = u(1,i,:)
     u(2,i+1,:) = eLc(u(:,i,:),dt,N,para)
@@ -225,7 +226,6 @@ program fpu
     u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     do k=1,jumps-1 !SABA2C 
     !Second loops exists so not all iterations are stored and kept
-      t(i+1) = t(i+1) + dt
       !eLc
       u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
       !SABA
@@ -238,12 +238,12 @@ program fpu
       u(2,i+1,:) = eLc(u(:,i+1,:),dt,N,para)
     end do
   end do
+  
+  !time reversal
   !u(:,1,:) = u(:,it_max,:)
   !dt=-dt
   !t(1) = t(it_max)
 
-   !Integration
-  
 
 
   !Normal modes transformation
@@ -254,22 +254,41 @@ program fpu
     end do
   end do
 
-
   !Normal mode energy
-  
+  !$omp parallel do
   do k=1,modes
-    nm_energy(:,k) = (0.5_dp)*(a(2,:,k))**2+2.0_dp*((sin(pi*k/(2.0_dp*N+2.0_dp)))**2)*(a(1,:,k))**2  
+    nm_energy(:,k) = (0.5_dp)*(a(2,:,k))**2+2.0_dp*((sin(pi*k/(2.0_dp*N+2.0_dp)))**2)*(a(1,:,k))**2
+    do i=1,N
+      do j=1,N
+        do l=1,N
+            nm_energy(:,k) = nm_energy(:,k)+(2*para/(N+1))*sin(pi*k/(2.0_dp*N+2.0_dp))*sin(pi*i/(2.0_dp*N+2.0_dp)) &
+                            *sin(pi*j/(2.0_dp*N+2.0_dp))*sin(pi*l/(2.0_dp*N+2.0_dp)) &
+                            *(kd(k+i+j+l,N)+kd(k+i+j-l,N)+kd(k+i-j+l,N)+kd(k-i+j+l,N) &
+                            +kd(k+i-j-l,N)+kd(k-i-j+l,N)+kd(k-i+j-l,N)+kd(k-i-j-l,N) ) &
+                            *a(1,:,k)*a(1,:,i)*a(1,:,j)*a(1,:,l)
+        end do
+      end do 
+    end do
   end do
+  !$omp end parallel do
+
   
-  do k=1,it_max
-  	s(k) = -sum(nm_energy(k,:)/e*log(abs(nm_energy(k,:)/e)))
-  end do
-
-  s(:) = -s(:)/log(1.0_dp*CEILING(N/2.0))+1
-
-  print*, N, 4, e,dt
+  !Write data
+  print*,'writing data to file...'
+  open(1,file="modal_energy",status="replace")
+  write(1,*) N, dt
+  write(1,*) e, para
   do i = 1,it_max
-    print*, t(i), s(i)
+    write(1,*) (i-1)*spacing, nm_energy(i,:)
   end do
+  close(1)
+  print*,'done'
+  
+  !Write data
+  !print*, N, dt
+  !print*, para, e
+  !do i = 1,it_max
+   ! print*, (i-1)*spacing, nm_energy(i,:)
+  !end do
 
 end program fpu
