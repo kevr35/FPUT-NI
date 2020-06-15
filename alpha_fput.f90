@@ -103,15 +103,15 @@ program fpu
   real(dp), parameter :: pi=4.0_dp*atan(1.0_dp),c1=(sqrt(3.0_dp)-1.0_dp)/(2.0_dp*sqrt(3.0_dp)), c2=1.0_dp/(sqrt(3.0_dp)),d1=0.5_dp
   real(dp) :: dt=0.1_dp, para, max_time, e, Amp, s
   real(dp), allocatable :: u(:,:), a(:,:), nm_energy(:)
-  character(len=255) :: path, fname
+  !character(len=255) :: path, fname
 
   read *, N
   read *, e
   read *, max_time
   read *, m
   read *, spacing
-  read *, path
-  read *, fname
+  !read *, path
+  !read *, fname
   !write(*, '("Enter the value of alpha: ")', &
   !  advance='no')
   !read *, para
@@ -183,13 +183,10 @@ program fpu
   !call system('mkdir '//trim(path)//'/ReissTemp') 
   
   !open file to write to
-  print*,path
-  print*,fname
-  print*, trim(path) // '/ReissTemp/' // fname
-  open(1,file= trim(path) // '/ReissTemp/' // fname,status="replace")
-  write(1,*) N, dt 
-  write(1,*) Amp,m
-  write(1,*) para, e
+  !open(1,file= trim(path) // '/ReissTemp/' // fname,status="replace")
+  print*, N, dt 
+  print*, Amp,m
+  print*, para, e
 
   !Integration
   do it=1,it_max-1 !SABA2C
@@ -209,7 +206,7 @@ program fpu
 	!entropy
 	s = (sum(nm_energy(:)/e*log(abs(nm_energy(:)/e))))/log(1.0_dp*CEILING(N/2.0))+1
 	!print
-	write(1,*) (it-1)*spacing, s
+	print*, (it-1)*spacing, s
     !eLc
     u(2,:) = eLc(u(:,:),dt,N,para)
     !SABA2
@@ -235,11 +232,11 @@ program fpu
     end do
   end do
   
-  close(1)
+  !close(1)
   
   !move file to projectnb
   
-  call system('mv '//trim(path) // '/ReissTemp/' // fname//' /projectnb2/frgeeeph/FPUT_files/AlphaMeta/'//fname)
+  !call system('mv '//trim(path) // '/ReissTemp/' // fname//' /projectnb2/frgeeeph/FPUT_files/AlphaMeta/'//fname)
 
 
   !u(:,1,:) = u(:,it_max,:)
