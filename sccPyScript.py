@@ -1,8 +1,9 @@
 import numpy as np
 import os
+import random
 
 #504:00:00
-def SubmitJob(job_name, E, N, time,dt, project = 'frgeeeph', run_time='10:00:00', mem_per_core='1', num_cores='1'):
+def SubmitJob(job_name, E, N, time,k,spacing,theta,executeable,dest, project = 'frgeeeph', run_time='12:00:00', mem_per_core='1', num_cores='1'):
 
    ###############################################
    # Create bash script used for the batch job
@@ -32,8 +33,8 @@ def SubmitJob(job_name, E, N, time,dt, project = 'frgeeeph', run_time='10:00:00'
    file.write("# Request a paralell environemtn with _ cores \n")
    file.write("#$ -pe omp "+num_cores+" \n \n")
    
-   file.write("# Request to run on Engineering resources only \n")
-   file.write("#$ -l buyin \n \n")
+   #file.write("# Request to run on Engineering resources only \n")
+   #file.write("#$ -l buyin \n \n")
 
    #file.write("# Number of GPUs per CPU requestedz \n")
    #file.write("#$ -l gpus=0.25 \n \n")
@@ -44,23 +45,33 @@ def SubmitJob(job_name, E, N, time,dt, project = 'frgeeeph', run_time='10:00:00'
    # ----- Assign Job Name -----
    file.write("# Give job a name \n")
    file.writelines(["#$ -N ", job_name, "\n \n"])
-
+   
+   file.write("# Specify the error file name \n")
+   file.writelines(["#$ -e ",job_name, "_ERROR \n \n"])
+   
    file.write("# Specify the output file name \n")
-   file.writelines(["#$ -o ", job_name, "\n \n"])
+   file.writelines(["#$ -o ",dest,job_name, " \n \n"])
+   
    
    file.write("#Make the environment actually parallel\n")
    file.write("export OMP_NUM_THREADS=$NSLOTS\n\n")
+   
+
+   
 
    # ----- Assign Variables -----
 
    file.writelines(["N=", str(N), "\n \n"])
    file.writelines(["e=", str(E), "\n \n"])
    file.writelines(["time=", str(time), "\n \n"])
-   file.writelines(["dt=", str(dt), "\n \n"])
+   file.writelines(["m=", str(k), "\n \n"])
    file.writelines(["spacing=", str(spacing), "\n \n"])
-
-   file.writelines(['echo -e \"$N\\n$e\\n$time\\n$dt\\n$spacing\" |  ./pbetalinentr8OD \n'])
-
+   file.writelines(["theta=", str(theta), "\n \n"])
+   
+   
+   file.writelines(['echo -e \"$N\\n$e\\n$time\\n$m\\n$spacing\\n$theta\" |  "/usr4/ugrad/kevr/AverageOverPhases/"',executeable, '\n\n'])
+   
+   
    file.close()
 
 
@@ -71,25 +82,26 @@ def SubmitJob(job_name, E, N, time,dt, project = 'frgeeeph', run_time='10:00:00'
    os.system('qsub '+filename)
    os.system('rm '+filename)
 
-Sizes=[31]
-Energies=[.61]
-#np.arange(.66,.695,.01)
+N=31
+Es=np.arange(.04,.2,.0025)
+k=1
 
-
-for N in Sizes:
-   for E in Energies:
-
-      job_name = 'PBetaEntropy_EB='+str(round(E,4))+'_N=' + str(N)+'_dt=.01'
-      
-      
-      time=10**7
-      spacing=100
-      dt=.01
-  #    S = E* (N+1)
-   #   if S < 10:
-    #    time=1.5*(0.2024+0.0227*S)*(N+1)**3
-     # else:
-      #  time = 1.5*(0.5862 / S**(.5))*(N+1)**3
-      
-
-      SubmitJob(job_name = job_name, E=E, N=N, time=time, dt=dt)
+for E in Es:
+  destination="/projectnb2/frgeeeph/FPUT_files/AlphaPhaseAveraging/N="+str(N)+"./E="+str(E)+"/"
+  os.mkdir(destination)
+  spacing=5000
+  jobs=100
+  
+  time=5*10**6
+  
+  theta=np.pi/2 #All P initially
+  job_name = 'TodaEntropy_E='+str(round(E,6))+'_N=' + str(N)#+"_spacing="+str(spacing)#+'_k=' + str(k)
+  SubmitJob(job_name = job_name, E=E, N=N,spacing=spacing, theta=theta, time=time, k=k,executeable='TodaPhase',dest=destination)
+  
+  for job in range(jobs):
+  
+    job_name = 'AlphaEntropy_E='+str(round(E,6))+'_N=' + str(N)+"_"+str(job)
+  
+    theta=2*np.pi*random.random()      
+    SubmitJob(job_name = job_name, E=E, N=N,spacing=spacing,theta=theta, time=time, k=k,executeable='AlphaPhases',dest=destination)  
+  
